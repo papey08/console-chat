@@ -57,8 +57,10 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 	// reading new messages
 	go func() {
 		defer func() {
-			conn.Close()
 			close(ch)
+			if err := conn.Close(); err != nil {
+				log.Fatal("connection closure error:", err.Error())
+			}
 		}()
 
 		for {

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"console-chat/internal/app"
 	"console-chat/internal/ports/ginserver"
 	"console-chat/internal/ports/wsserver"
+	userrepo "console-chat/internal/repo/user_repo"
 	"errors"
 	"log"
 	"net/http"
@@ -23,7 +25,8 @@ func main() {
 	port := viper.GetInt("server.ginserver.port")
 
 	ws := wsserver.NewWsServer()
-	server := ginserver.NewHTTPServer(host, port, ws)
+	app := app.New(userrepo.New())
+	server := ginserver.NewHTTPServer(host, port, ws, app)
 	if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		log.Fatalf("can't listen and serve server: %s", err.Error())
 	}

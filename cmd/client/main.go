@@ -26,6 +26,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("can't dial connection: %s", err.Error())
 	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Fatal("connection closure error:", err.Error())
+		}
+	}()
 
 	// getting info about the user
 	fmt.Print("Enter your name: ")
