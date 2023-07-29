@@ -1,0 +1,4 @@
+"server":
+  "ginserver":
+    "host": "localhost"
+    "port": 8080
