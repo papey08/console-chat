@@ -63,7 +63,7 @@ func RegisterNewUser() {
 
 		// making request to the http server and getting the response
 		client := &http.Client{}
-		req, err := http.NewRequest("POST", httpUrl, strings.NewReader(jsonStr))
+		req, err := http.NewRequest(http.MethodPost, httpUrl, strings.NewReader(jsonStr))
 		if err != nil {
 			log.Fatal("request error:", err.Error())
 		}
@@ -151,7 +151,7 @@ func SignIn() string {
 
 		// making request to the http server and getting the response
 		client := &http.Client{}
-		req, err := http.NewRequest("GET", getUrl, strings.NewReader(jsonStr))
+		req, err := http.NewRequest(http.MethodGet, getUrl, strings.NewReader(jsonStr))
 		if err != nil {
 			log.Fatal("request error:", err.Error())
 		}

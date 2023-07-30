@@ -1,6 +1,7 @@
 package wsserver
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -51,8 +52,22 @@ func (s *WsServer) auth(conn net.Conn) (string, error) {
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		return claims["nickname"].(string), nil
 	} else {
-		return "", err
+		return "", errors.New("auth failure")
 	}
+}
+
+func (s *WsServer) SendMessageToUsers(publisher string, message []byte) {
+	s.mu.Lock()
+	for key, connection := range s.connections {
+		if key == publisher {
+			continue
+		} else if err := wsutil.WriteServerMessage(connection, ws.OpText, message); err != nil {
+			log.Println("can't write message:", err.Error())
+			delete(s.connections, key)
+		}
+	}
+	defer s.mu.Unlock()
+
 }
 
 func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
@@ -72,6 +87,8 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 
 	// creating connection for new user
 	s.AddConnection(conn, nickname)
+	log.Println(nickname, "joins the chat")
+	s.SendMessageToUsers(nickname, []byte(nickname+" joins the chat"))
 	ch := make(chan []byte)
 
 	// reading new messages
@@ -99,18 +116,10 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		for msg := range ch {
 			msg = append([]byte(nickname+": "), msg...)
-			s.mu.Lock()
-			for key, connection := range s.connections {
-				if key == nickname {
-					continue
-				} else if err := wsutil.WriteServerMessage(connection, ws.OpText, msg); err != nil {
-					log.Println("can't write message:", err.Error())
-					delete(s.connections, key)
-				}
-			}
-			s.mu.Unlock()
+			s.SendMessageToUsers(nickname, msg)
 		}
 		log.Println(nickname, "leaves the chat")
+		s.SendMessageToUsers(nickname, []byte(nickname+" leaves the chat"))
 		s.mu.Lock()
 		delete(s.connections, nickname)
 		s.mu.Unlock()
