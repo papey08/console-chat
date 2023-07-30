@@ -7,6 +7,8 @@ import (
 )
 
 type WsServer interface {
+	// Chat adds new client to the chat. First message
+	// should contain token with coded nickname of the connected user
 	Chat(w http.ResponseWriter, r *http.Request)
 }
 
