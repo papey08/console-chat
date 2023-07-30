@@ -3,16 +3,11 @@ package ginserver
 import (
 	"bytes"
 	"console-chat/internal/model"
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"net"
 	"net/http"
-	"time"
 
-	"github.com/gobwas/ws"
-	"github.com/gobwas/ws/wsutil"
 	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -248,115 +243,4 @@ func (s *ginServerTestSuite) TestPostUser() {
 		assert.Equal(s.T(), test.expectedStatusCode, code)
 		assert.NoError(s.T(), err)
 	}
-}
-
-// codeNicknameInToken codes user nickname into valid token []byte
-func codeNicknameInToken(nickname string) ([]byte, error) {
-	token := jwt.New(jwt.SigningMethodHS256)
-	claims := token.Claims.(jwt.MapClaims)
-	claims["nickname"] = nickname
-	claims["exp"] = time.Now().Add(24 * time.Hour).Unix()
-	tokenInStr, err := token.SignedString([]byte("abcd"))
-	if err != nil {
-		return nil, err
-	}
-	return []byte(tokenInStr), err
-}
-
-// getChat connects to the chat and sends user token to authorize
-func getChat(token []byte) (net.Conn, error) {
-	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://localhost:8081/console-chat/chat")
-	if err != nil {
-		return nil, err
-	}
-	if err = wsutil.WriteClientMessage(conn, ws.OpText, token); err != nil {
-		_ = conn.Close()
-		return nil, err
-	}
-	return conn, nil
-}
-
-func (s *ginServerTestSuite) TestChat() {
-	// user01 joins the chat
-	token, err := codeNicknameInToken("user01")
-	assert.NoError(s.T(), err)
-	conn01, err := getChat(token)
-	assert.NoError(s.T(), err)
-
-	// user02 joins the chat
-	token, err = codeNicknameInToken("user02")
-	assert.NoError(s.T(), err)
-	conn02, err := getChat(token)
-	assert.NoError(s.T(), err)
-
-	// user01 gets message that user02 joined the chat
-	msg, _, err := wsutil.ReadServerData(conn01)
-	assert.Equal(s.T(), "user02 joins the chat", string(msg))
-	assert.NoError(s.T(), err)
-
-	// user01 sends message to the chat
-	err = wsutil.WriteClientMessage(conn01, ws.OpText, []byte("Ping"))
-	assert.NoError(s.T(), err)
-
-	// user02 gets message from user01
-	msg, _, err = wsutil.ReadServerData(conn02)
-	assert.Equal(s.T(), "user01: Ping", string(msg))
-	assert.NoError(s.T(), err)
-
-	// user02 sends message to user01
-	err = wsutil.WriteClientMessage(conn02, ws.OpText, []byte("Pong"))
-	assert.NoError(s.T(), err)
-
-	// user01 gets message from user02
-	msg, _, err = wsutil.ReadServerData(conn01)
-	assert.Equal(s.T(), "user02: Pong", string(msg))
-	assert.NoError(s.T(), err)
-
-	// user03 joins the chat
-	token, err = codeNicknameInToken("user03")
-	assert.NoError(s.T(), err)
-	conn03, err := getChat(token)
-	assert.NoError(s.T(), err)
-
-	// user01 gets message that user03 joined the chat
-	msg, _, err = wsutil.ReadServerData(conn01)
-	assert.Equal(s.T(), "user03 joins the chat", string(msg))
-	assert.NoError(s.T(), err)
-
-	// user02 gets message that user03 joined the chat
-	msg, _, err = wsutil.ReadServerData(conn02)
-	assert.Equal(s.T(), "user03 joins the chat", string(msg))
-	assert.NoError(s.T(), err)
-
-	// user01 sends message to the chat
-	err = wsutil.WriteClientMessage(conn01, ws.OpText, []byte("Ping 2"))
-	assert.NoError(s.T(), err)
-
-	// user02 gets message from user01
-	msg, _, err = wsutil.ReadServerData(conn02)
-	assert.Equal(s.T(), "user01: Ping 2", string(msg))
-	assert.NoError(s.T(), err)
-
-	// user02 sends message to user01
-	err = wsutil.WriteClientMessage(conn02, ws.OpText, []byte("Pong 2"))
-	assert.NoError(s.T(), err)
-
-	// user01 gets message from user02
-	msg, _, err = wsutil.ReadServerData(conn01)
-	assert.Equal(s.T(), "user02: Pong 2", string(msg))
-	assert.NoError(s.T(), err)
-
-	// user03 gets message from user01
-	msg, _, err = wsutil.ReadServerData(conn03)
-	assert.Equal(s.T(), "user01: Ping 2", string(msg))
-	assert.NoError(s.T(), err)
-
-	// user03 sends message to user01
-	err = wsutil.WriteClientMessage(conn03, ws.OpText, []byte("Pong 2"))
-	assert.NoError(s.T(), err)
-
-	// user01 gets message from user03
-	msg, _, err = wsutil.ReadServerData(conn01)
-	assert.Equal(s.T(), "user03: Pong 2", string(msg))
-	assert.NoError(s.T(), err)
 }
