@@ -9,13 +9,10 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/gobwas/ws"
@@ -192,20 +189,13 @@ func SignIn() string {
 	}
 }
 
-func CloseConnectionAndExit(conn net.Conn) {
-	if err := conn.Close(); err != nil {
-		log.Fatal("connection closure error:", err.Error())
-	}
-	os.Exit(0)
-}
-
 func main() {
 	reg := flag.Bool("reg", false, "Flag to register new user")
 	sign := flag.Bool("sign", false, "Flag to sign in and join the chat")
 	flag.Parse()
 
 	if *reg == *sign {
-		fmt.Println("This is console-chat client. Run this program with \"-reg\" flag to register new user or \"-sign\" flag to sign in and join the chat")
+		fmt.Print("\nThis is console-chat client. Run this program with \"-reg\" flag to register new user or \"-sign\" flag to sign in and join the chat\n\n")
 	} else if *reg { // registration of the new user
 		RegisterNewUser()
 	} else { // signing in and connecting to the chat
@@ -224,20 +214,9 @@ func main() {
 			fmt.Println("Successfully connected to chat. Start writing messages!")
 		}
 
-		// preparing graceful shutdown for correct conn closure
-		osSignals := make(chan os.Signal, 1)
-		signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
-		signal.Notify(osSignals, os.Interrupt, syscall.SIGINT)
-
-		ctx, cancel := context.WithCancel(context.Background())
-
 		// reading messages from the server
-		go func(ctx context.Context) {
+		go func() {
 			for {
-				select {
-				case <-ctx.Done():
-					CloseConnectionAndExit(conn)
-				}
 				data, _, err := wsutil.ReadServerData(conn)
 				if err != nil && err != io.EOF {
 					log.Fatal("can't read server data:", err.Error())
@@ -248,35 +227,23 @@ func main() {
 
 				fmt.Println(string(data))
 			}
-		}(ctx)
+		}()
 
-		go func(ctx context.Context) {
-			reader := bufio.NewReader(os.Stdin)
+		reader := bufio.NewReader(os.Stdin)
 
-			// sending messages from the user
-			for {
-				select {
-				case <-ctx.Done():
-					CloseConnectionAndExit(conn)
-				default:
-					text, err := reader.ReadString('\n')
-					if err != nil {
-						log.Fatalf("can't read string from stdin: %s", err.Error())
-					}
-
-					text = text[:len(text)-1]
-
-					if err := wsutil.WriteClientMessage(conn, ws.OpText, []byte(text)); err != nil {
-						log.Fatal("can't wtite client message:", err.Error())
-					}
-
-					time.Sleep(100 * time.Millisecond) // delay between sending messages
-				}
-
+		// sending messages from the user
+		for {
+			text, err := reader.ReadString('\n')
+			if err != nil {
+				log.Fatalf("can't read string from stdin: %s", err.Error())
 			}
-		}(ctx)
+			text = text[:len(text)-1]
 
-		<-osSignals
-		cancel()
+			if err := wsutil.WriteClientMessage(conn, ws.OpText, []byte(text)); err != nil {
+				log.Fatal("can't wtite client message:", err.Error())
+			}
+
+			time.Sleep(100 * time.Millisecond) // delay between sending messages
+		}
 	}
 }

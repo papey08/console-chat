@@ -1,50 +1,62 @@
 package userrepo
 
 import (
+	"console-chat/internal/app"
 	"console-chat/internal/model"
 	"context"
-	"sync"
+	"log"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
+const (
+	// addUserQuery is a query to insert user into database
+	addUserQuery = `
+		INSERT INTO users (nickname, hashed_password)
+		VALUES ($1, $2);`
+
+	// getUserQuery is a query to select user from the database
+	getUserQuery = `
+		SELECT * FROM users
+		WHERE nickname = $1;`
+)
+
+// duplicateCode is a code of pgconn.PgError when primary key is duplicated
+const duplicateCode = "23505"
+
 type Repo struct {
-	usrs map[string]model.User
-	mu   *sync.Mutex
+	pgx.Conn
 }
 
-func New() *Repo {
+func New(conn *pgx.Conn) app.UserRepo {
 	return &Repo{
-		usrs: make(map[string]model.User),
-		mu:   new(sync.Mutex),
+		Conn: *conn,
 	}
 }
 
 func (r *Repo) AddUser(ctx context.Context, u model.User) (model.User, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	select {
-	case <-ctx.Done():
-		return model.User{}, model.UserRepoError
-	default:
-		if _, ok := r.usrs[u.Nickname]; ok {
+	_, err := r.Exec(ctx, addUserQuery, u.Nickname, u.HashedPassword)
+	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == duplicateCode {
 			return model.User{}, model.UserAlreadyExists
 		} else {
-			r.usrs[u.Nickname] = u
-			return u, nil
+			// debug info
+			log.Println(err.Error())
+			return model.User{}, model.UserRepoError
 		}
 	}
+	return u, nil
 }
 
 func (r *Repo) GetUser(ctx context.Context, nickname string) (model.User, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	select {
-	case <-ctx.Done():
+	var usr model.User
+	row := r.QueryRow(ctx, getUserQuery, nickname)
+	if err := row.Scan(&usr.Nickname, &usr.HashedPassword); err == pgx.ErrNoRows {
+		return model.User{}, model.UserNotFound
+	} else if err != nil {
 		return model.User{}, model.UserRepoError
-	default:
-		if u, ok := r.usrs[nickname]; ok {
-			return u, nil
-		} else {
-			return model.User{}, model.UserNotFound
-		}
+	} else {
+		return usr, nil
 	}
 }
