@@ -6,25 +6,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type userResponse struct {
-	Nickname       string `json:"nickname"`
-	HashedPassword string `json:"hashed_password"`
+type tokenResponse struct {
+	TokenString string `json:"token_string"`
 }
 
-func getUserResponse(usr model.User) *gin.H {
+func getUserResponse(token string) *gin.H {
 	return &gin.H{
-		"data": userResponse{
-			Nickname:       usr.Nickame,
-			HashedPassword: usr.HashedPassword,
+		"data": tokenResponse{
+			TokenString: token,
 		},
 		"error": nil,
 	}
 }
 
+type userResponse struct {
+	Nickname       string `json:"nickname"`
+	HashedPassword string `json:"hashed_password"`
+}
+
 func postUserResponse(usr model.User) *gin.H {
 	return &gin.H{
 		"data": userResponse{
-			Nickname:       usr.Nickame,
+			Nickname:       usr.Nickname,
 			HashedPassword: usr.HashedPassword,
 		},
 		"error": nil,

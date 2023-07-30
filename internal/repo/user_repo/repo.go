@@ -25,10 +25,10 @@ func (r *Repo) AddUser(ctx context.Context, u model.User) (model.User, error) {
 	case <-ctx.Done():
 		return model.User{}, model.UserRepoError
 	default:
-		if _, ok := r.usrs[u.Nickame]; ok {
+		if _, ok := r.usrs[u.Nickname]; ok {
 			return model.User{}, model.UserAlreadyExists
 		} else {
-			r.usrs[u.Nickame] = u
+			r.usrs[u.Nickname] = u
 			return u, nil
 		}
 	}

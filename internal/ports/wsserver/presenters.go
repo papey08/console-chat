@@ -1,5 +1,5 @@
 package wsserver
 
-type userPresenter struct {
-	Nickname string `json:"nickname"`
+type tokenPresenter struct {
+	TokenString string `json:"token_string"`
 }

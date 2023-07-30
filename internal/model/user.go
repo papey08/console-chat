@@ -1,6 +1,6 @@
 package model
 
 type User struct {
-	Nickame        string
+	Nickname       string
 	HashedPassword string
 }

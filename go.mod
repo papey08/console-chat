@@ -3,8 +3,10 @@ module console-chat
 go 1.20
 
 require (
+	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gobwas/ws v1.2.1
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/spf13/viper v1.16.0
 )
 

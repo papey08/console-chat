@@ -10,17 +10,20 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/golang-jwt/jwt"
 )
 
 type WsServer struct {
 	connections map[string]net.Conn
 	mu          *sync.Mutex
+	tokenKey    []byte
 }
 
-func NewWsServer() *WsServer {
+func NewWsServer(tokenKey []byte) *WsServer {
 	return &WsServer{
 		connections: make(map[string]net.Conn),
 		mu:          new(sync.Mutex),
+		tokenKey:    tokenKey,
 	}
 }
 
@@ -28,6 +31,33 @@ func (s *WsServer) AddConnection(conn net.Conn, nickname string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.connections[nickname] = conn
+}
+
+func (s *WsServer) auth(conn net.Conn) (string, error) {
+	tokenData, _, err := wsutil.ReadClientData(conn)
+	if err != nil {
+		return "", err
+	}
+	var tokenPrs tokenPresenter
+	if err := json.Unmarshal(tokenData, &tokenPrs); err != nil {
+		return "", err
+	}
+
+	token, err := jwt.Parse(tokenPrs.TokenString, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return s.tokenKey, nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims["nickname"].(string), nil
+	} else {
+		return "", err
+	}
 }
 
 func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
@@ -38,20 +68,15 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// getting info about user
-	usrData, _, err := wsutil.ReadClientData(conn)
+	// getting client's token and check if it is valid
+	nickname, err := s.auth(conn)
 	if err != nil {
-		log.Println("can't read user data:", err.Error())
-		return
-	}
-	var usr userPresenter
-	if err := json.Unmarshal(usrData, &usr); err != nil {
-		log.Println("can't unmarshal user data:", err.Error())
+		log.Println("can't get and validate token:", err.Error())
 		return
 	}
 
 	// creating connection for new user
-	s.AddConnection(conn, usr.Nickname)
+	s.AddConnection(conn, nickname)
 	ch := make(chan []byte)
 
 	// reading new messages
@@ -78,10 +103,10 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 	// sending messages to the users
 	go func() {
 		for msg := range ch {
-			msg = append([]byte(usr.Nickname+": "), msg...)
+			msg = append([]byte(nickname+": "), msg...)
 			s.mu.Lock()
 			for key, connection := range s.connections {
-				if key == usr.Nickname {
+				if key == nickname {
 					continue
 				} else if err := wsutil.WriteServerMessage(connection, ws.OpText, msg); err != nil {
 					log.Println("can't write message:", err.Error())
@@ -90,9 +115,9 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 			}
 			s.mu.Unlock()
 		}
-		log.Println(usr.Nickname, "leaves the chat")
+		log.Println(nickname, "leaves the chat")
 		s.mu.Lock()
-		delete(s.connections, usr.Nickname)
+		delete(s.connections, nickname)
 		s.mu.Unlock()
 	}()
 }

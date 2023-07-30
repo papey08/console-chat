@@ -23,7 +23,7 @@ func (a *MyApp) RegisterUser(ctx context.Context, nickname, password string) (mo
 	}
 
 	var usr model.User
-	usr.Nickame = nickname
+	usr.Nickname = nickname
 
 	// creating hash sum of the password
 	hash := sha256.New()

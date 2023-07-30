@@ -4,11 +4,13 @@ import (
 	"console-chat/internal/app"
 	"console-chat/internal/model"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt"
 )
 
-func getUser(a app.App) gin.HandlerFunc {
+func getUser(a app.App, tokenKey []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		nickname := c.Param("user_nickname")
 		var reqBody getUserRequest
@@ -23,7 +25,15 @@ func getUser(a app.App) gin.HandlerFunc {
 		case model.UserWrongPassword:
 			c.AbortWithStatusJSON(http.StatusUnauthorized, ErrorResponse(getErr))
 		case nil:
-			c.JSON(http.StatusOK, getUserResponse(usr))
+			token := jwt.New(jwt.SigningMethodHS256)
+			claims := token.Claims.(jwt.MapClaims)
+			claims["nickname"] = usr.Nickname
+			claims["exp"] = time.Now().Add(24 * time.Hour).Unix()
+			if tokenInStr, err := token.SignedString(tokenKey); err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, ErrorResponse(err))
+			} else {
+				c.JSON(http.StatusOK, getUserResponse(tokenInStr))
+			}
 		default:
 			c.AbortWithStatusJSON(http.StatusInternalServerError, ErrorResponse(getErr))
 		}
