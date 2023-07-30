@@ -41,7 +41,7 @@ func getChat(url string, token []byte) (net.Conn, error) {
 }
 
 func TestChat(t *testing.T) {
-	wsserver := NewWsServer([]byte("abcd"))
+	wsserver := New([]byte("abcd"))
 	server := httptest.NewServer(http.HandlerFunc(wsserver.Chat))
 	defer server.Close()
 

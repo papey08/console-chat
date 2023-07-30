@@ -30,7 +30,7 @@ func main() {
 	port := viper.GetInt("server.ginserver.port")
 	tokenKey := []byte(randomdata.Paragraph())
 
-	ws := wsserver.NewWsServer(tokenKey)
+	ws := wsserver.New(tokenKey)
 	app := app.New(userrepo.New())
 	server := ginserver.NewHTTPServer(host, port, ws, app, tokenKey)
 

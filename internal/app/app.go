@@ -8,11 +8,11 @@ import (
 	"encoding/hex"
 )
 
-type MyApp struct {
+type app struct {
 	UserRepo
 }
 
-func (a *MyApp) RegisterUser(ctx context.Context, nickname, password string) (model.User, error) {
+func (a *app) RegisterUser(ctx context.Context, nickname, password string) (model.User, error) {
 
 	// check if nickname and password are both valid
 	if !valid.IsValidNickname(nickname) {
@@ -34,7 +34,7 @@ func (a *MyApp) RegisterUser(ctx context.Context, nickname, password string) (mo
 	return a.AddUser(ctx, usr)
 }
 
-func (a *MyApp) SignInUser(ctx context.Context, nickname, password string) (model.User, error) {
+func (a *app) SignInUser(ctx context.Context, nickname, password string) (model.User, error) {
 	var usr model.User
 	var err error
 

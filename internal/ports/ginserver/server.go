@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func NewHTTPServer(host string, port int, ws *wsserver.WsServer, app app.App, tokenKey []byte) *http.Server {
+func NewHTTPServer(host string, port int, ws wsserver.WsServer, app app.App, tokenKey []byte) *http.Server {
 	gin.SetMode(gin.DebugMode)
 	router := gin.Default()
 	api := router.Group("console-chat")

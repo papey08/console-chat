@@ -16,7 +16,7 @@ type UserRepo interface {
 }
 
 func New(repo UserRepo) App {
-	return &MyApp{
+	return &app{
 		UserRepo: repo,
 	}
 }

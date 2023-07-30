@@ -12,29 +12,21 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-type WsServer struct {
+type wsServer struct {
 	connections map[string]net.Conn
 	mu          *sync.Mutex
 	tokenKey    []byte
 }
 
-func NewWsServer(tokenKey []byte) *WsServer {
-	return &WsServer{
-		connections: make(map[string]net.Conn),
-		mu:          new(sync.Mutex),
-		tokenKey:    tokenKey,
-	}
-}
-
 // AddConnection adds new client connection to the server
-func (s *WsServer) AddConnection(conn net.Conn, nickname string) {
+func (s *wsServer) addConnection(conn net.Conn, nickname string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.connections[nickname] = conn
 }
 
 // getToken reads client token
-func (s *WsServer) getToken(conn net.Conn) ([]byte, error) {
+func (s *wsServer) getToken(conn net.Conn) ([]byte, error) {
 	tokenData, _, err := wsutil.ReadClientData(conn)
 	if err != nil {
 		return nil, err
@@ -43,7 +35,7 @@ func (s *WsServer) getToken(conn net.Conn) ([]byte, error) {
 }
 
 // auth checks if token is valid and returns nickname coded in token
-func (s *WsServer) auth(tokenData []byte) (string, error) {
+func (s *wsServer) auth(tokenData []byte) (string, error) {
 	token, err := jwt.Parse(string(tokenData), func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, jwt.ErrSignatureInvalid
@@ -62,7 +54,7 @@ func (s *WsServer) auth(tokenData []byte) (string, error) {
 }
 
 // sendMessageToUsers sends message from publisher to all other clients
-func (s *WsServer) sendMessageToUsers(publisher string, message []byte) {
+func (s *wsServer) sendMessageToUsers(publisher string, message []byte) {
 	s.mu.Lock()
 	for key, connection := range s.connections {
 		if key == publisher {
@@ -77,7 +69,7 @@ func (s *WsServer) sendMessageToUsers(publisher string, message []byte) {
 }
 
 // Chat adds new client to the chat
-func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
+func (s *wsServer) Chat(w http.ResponseWriter, r *http.Request) {
 	// creating connection to websocket
 	conn, _, _, err := ws.UpgradeHTTP(r, w)
 	if err != nil {
@@ -98,7 +90,7 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// creating connection for new user
-	s.AddConnection(conn, nickname)
+	s.addConnection(conn, nickname)
 	log.Println(nickname, "joins the chat")
 	s.sendMessageToUsers(nickname, []byte(nickname+" joins the chat"))
 	ch := make(chan []byte)

@@ -25,7 +25,7 @@ func ginServerTestSuiteInit(s *ginServerTestSuite) {
 	s.app = new(mocks.App)
 
 	tokenKey := []byte("abcd")
-	ws := wsserver.NewWsServer(tokenKey)
+	ws := wsserver.New(tokenKey)
 	s.server = NewHTTPServer("localhost", 8081, ws, s.app, tokenKey)
 	testServer := httptest.NewServer(s.server.Handler)
 	s.client = testServer.Client()
