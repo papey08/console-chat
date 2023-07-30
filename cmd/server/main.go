@@ -6,7 +6,6 @@ import (
 	"console-chat/internal/ports/wsserver"
 	userrepo "console-chat/internal/repo/user_repo"
 	"context"
-	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -42,7 +41,7 @@ func main() {
 
 	go func() {
 		log.Println("Starting http server")
-		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatalf("can't listen and serve server: %s", err.Error())
 		}
 	}()

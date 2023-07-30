@@ -2,7 +2,6 @@ package wsserver
 
 import (
 	"errors"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -27,18 +26,24 @@ func NewWsServer(tokenKey []byte) *WsServer {
 	}
 }
 
+// AddConnection adds new client connection to the server
 func (s *WsServer) AddConnection(conn net.Conn, nickname string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.connections[nickname] = conn
 }
 
-func (s *WsServer) auth(conn net.Conn) (string, error) {
+// getToken reads client token
+func (s *WsServer) getToken(conn net.Conn) ([]byte, error) {
 	tokenData, _, err := wsutil.ReadClientData(conn)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+	return tokenData, nil
+}
 
+// auth checks if token is valid and returns nickname coded in token
+func (s *WsServer) auth(tokenData []byte) (string, error) {
 	token, err := jwt.Parse(string(tokenData), func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, jwt.ErrSignatureInvalid
@@ -56,13 +61,14 @@ func (s *WsServer) auth(conn net.Conn) (string, error) {
 	}
 }
 
-func (s *WsServer) SendMessageToUsers(publisher string, message []byte) {
+// sendMessageToUsers sends message from publisher to all other clients
+func (s *WsServer) sendMessageToUsers(publisher string, message []byte) {
 	s.mu.Lock()
 	for key, connection := range s.connections {
 		if key == publisher {
 			continue
 		} else if err := wsutil.WriteServerMessage(connection, ws.OpText, message); err != nil {
-			log.Println("can't write message:", err.Error())
+			log.Println(publisher, "was disconnected from the chat")
 			delete(s.connections, key)
 		}
 	}
@@ -70,6 +76,7 @@ func (s *WsServer) SendMessageToUsers(publisher string, message []byte) {
 
 }
 
+// Chat adds new client to the chat
 func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 	// creating connection to websocket
 	conn, _, _, err := ws.UpgradeHTTP(r, w)
@@ -79,7 +86,12 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// getting client's token and check if it is valid
-	nickname, err := s.auth(conn)
+	tokenData, err := s.getToken(conn)
+	if err != nil {
+		log.Println("can't upgrade connection:", err.Error())
+		return
+	}
+	nickname, err := s.auth(tokenData)
 	if err != nil {
 		log.Println("can't get and validate token:", err.Error())
 		return
@@ -88,7 +100,7 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 	// creating connection for new user
 	s.AddConnection(conn, nickname)
 	log.Println(nickname, "joins the chat")
-	s.SendMessageToUsers(nickname, []byte(nickname+" joins the chat"))
+	s.sendMessageToUsers(nickname, []byte(nickname+" joins the chat"))
 	ch := make(chan []byte)
 
 	// reading new messages
@@ -102,9 +114,7 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 
 		for {
 			msg, _, err := wsutil.ReadClientData(conn)
-			if err != nil && err != io.EOF {
-				log.Fatal("can't read message from connection:", err.Error())
-			} else if err == io.EOF {
+			if err != nil {
 				break
 			}
 
@@ -116,10 +126,10 @@ func (s *WsServer) Chat(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		for msg := range ch {
 			msg = append([]byte(nickname+": "), msg...)
-			s.SendMessageToUsers(nickname, msg)
+			s.sendMessageToUsers(nickname, msg)
 		}
 		log.Println(nickname, "leaves the chat")
-		s.SendMessageToUsers(nickname, []byte(nickname+" leaves the chat"))
+		s.sendMessageToUsers(nickname, []byte(nickname+" leaves the chat"))
 		s.mu.Lock()
 		delete(s.connections, nickname)
 		s.mu.Unlock()
