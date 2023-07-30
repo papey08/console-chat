@@ -2,7 +2,7 @@ package valid
 
 import "unicode"
 
-const allowedPasswordSpecial = "!@#$%^&*()_+-=,.<>/?;:{}[]\\|"
+const allowedPasswordSpecial = "!@#$%^&*()_+-=,.<>?;:{}[]"
 
 // IsValidPassword checks if password has valid len and contains only allowed
 // symbols and has all of letter, digit and special symbol

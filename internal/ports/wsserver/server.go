@@ -1,7 +1,6 @@
 package wsserver
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 	"net"
@@ -38,12 +37,8 @@ func (s *WsServer) auth(conn net.Conn) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var tokenPrs tokenPresenter
-	if err := json.Unmarshal(tokenData, &tokenPrs); err != nil {
-		return "", err
-	}
 
-	token, err := jwt.Parse(tokenPrs.TokenString, func(token *jwt.Token) (any, error) {
+	token, err := jwt.Parse(string(tokenData), func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, jwt.ErrSignatureInvalid
 		}
