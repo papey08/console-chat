@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -53,6 +54,8 @@ type getUserTest struct {
 	givenURL           string
 	givenBody          map[string]any
 	expectedStatusCode int
+	expectGetToken     bool
+	expectedNickname   string // to check if token is correct
 }
 
 func (s *ginServerTestSuite) TestGetUser() {
@@ -93,6 +96,8 @@ func (s *ginServerTestSuite) TestGetUser() {
 				"password": "qwerty_123",
 			},
 			expectedStatusCode: http.StatusOK,
+			expectGetToken:     true,
+			expectedNickname:   "papey08",
 		},
 		{
 			description: "user not exists",
@@ -120,9 +125,26 @@ func (s *ginServerTestSuite) TestGetUser() {
 	}
 
 	for _, test := range tests {
-		_, code, err := s.getUser(test.givenURL, test.givenBody)
+		resp, code, err := s.getUser(test.givenURL, test.givenBody)
 		assert.Equal(s.T(), test.expectedStatusCode, code)
 		assert.NoError(s.T(), err)
+
+		if test.expectGetToken {
+			tokenStr := resp.Data.TokenString
+			token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (any, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, jwt.ErrSignatureInvalid
+				}
+				return []byte("abcd"), nil
+			})
+			assert.NoError(s.T(), err)
+
+			if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+				assert.Equal(s.T(), test.expectedNickname, claims["nickname"].(string))
+			} else {
+				assert.Fail(s.T(), "wrong token")
+			}
+		}
 	}
 }
 
