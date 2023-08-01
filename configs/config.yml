@@ -1,12 +1,12 @@
 "server":
   "ginserver":
-    "host": "localhost"
+    "host": "app"
     "port": 8080
 
 "userrepo":
   "username": "postgres"
   "password": "postgres"
-  "host": "localhost"
+  "host": "user_repo"
   "port": "5432"
-  "dbname": "user_repo"
+  "dbname": "postgres"
   "sslmode": "disable"
