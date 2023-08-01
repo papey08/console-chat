@@ -7,7 +7,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -17,7 +16,7 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 const httpUrl = "http://localhost:8080/console-chat/users"
@@ -45,7 +44,7 @@ func RegisterNewUser() {
 
 		// getting new user password
 		fmt.Print("Enter new user's password: ")
-		password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+		password, err := term.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
 			log.Fatal("password input error:", err.Error())
 		}
@@ -77,7 +76,7 @@ func RegisterNewUser() {
 				log.Fatal("response body closure error:", err.Error())
 			}
 		}()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			log.Fatal("response body read error:", err.Error())
 		}
@@ -133,7 +132,7 @@ func SignIn() string {
 
 		// getting user password
 		fmt.Print("Enter your password: ")
-		password, err := terminal.ReadPassword(int(os.Stdin.Fd()))
+		password, err := term.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
 			log.Fatal("password input error:", err.Error())
 		}
@@ -165,7 +164,7 @@ func SignIn() string {
 				log.Fatal("response body closure error:", err.Error())
 			}
 		}()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		if err != nil {
 			log.Fatal("response body read error:", err.Error())
 		}

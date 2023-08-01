@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Pallinder/go-randomdata"
+	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5"
 	"github.com/spf13/viper"
 )
@@ -48,12 +49,12 @@ func main() {
 
 	// configuring userRepo
 	userRepoURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		viper.GetString("userrepo.username"),
-		viper.GetString("userrepo.password"),
-		viper.GetString("userrepo.host"),
-		viper.GetString("userrepo.port"),
-		viper.GetString("userrepo.dbname"),
-		viper.GetString("userrepo.sslmode"))
+		viper.GetString("userrepo.postgres.username"),
+		viper.GetString("userrepo.postgres.password"),
+		viper.GetString("userrepo.postgres.host"),
+		viper.GetString("userrepo.postgres.port"),
+		viper.GetString("userrepo.postgres.dbname"),
+		viper.GetString("userrepo.postgres.sslmode"))
 
 	ctx := context.Background()
 	userRepoConn := UserRepoConfig(ctx, userRepoURL)
@@ -63,8 +64,24 @@ func main() {
 		}
 	}()
 
+	redisHost := viper.GetString("userrepo.redis.host")
+	redisPort := viper.GetString("userrepo.redis.port")
+	redisPassword := viper.GetString("userrepo.redis.password")
+	redisDB := viper.GetInt("userrepo.redis.DB")
+
+	redisCache := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
+		Password: redisPassword,
+		DB:       redisDB,
+	})
+	defer func() {
+		if err := redisCache.Close(); err != nil {
+			log.Fatal("can't close recis cache connection:", err.Error())
+		}
+	}()
+
 	ws := wsserver.New(tokenKey)
-	app := app.New(userrepo.New(userRepoConn))
+	app := app.New(userrepo.New(userRepoConn, redisCache))
 	server := ginserver.NewHTTPServer(host, port, ws, app, tokenKey)
 
 	// preparing graceful shutdown

@@ -1,7 +1,6 @@
 package userrepo
 
 import (
-	"console-chat/internal/app"
 	"console-chat/internal/model"
 	"context"
 	"log"
@@ -25,17 +24,17 @@ const (
 // duplicateCode is a code of pgconn.PgError when primary key is duplicated
 const duplicateCode = "23505"
 
-type Repo struct {
+type permanentRepo struct {
 	pgx.Conn
 }
 
-func New(conn *pgx.Conn) app.UserRepo {
-	return &Repo{
+func newPermanent(conn *pgx.Conn) permanent {
+	return &permanentRepo{
 		Conn: *conn,
 	}
 }
 
-func (r *Repo) AddUser(ctx context.Context, u model.User) (model.User, error) {
+func (r *permanentRepo) InsertUser(ctx context.Context, u model.User) (model.User, error) {
 	_, err := r.Exec(ctx, addUserQuery, u.Nickname, u.HashedPassword)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == duplicateCode {
@@ -49,7 +48,7 @@ func (r *Repo) AddUser(ctx context.Context, u model.User) (model.User, error) {
 	return u, nil
 }
 
-func (r *Repo) GetUser(ctx context.Context, nickname string) (model.User, error) {
+func (r *permanentRepo) SelectUser(ctx context.Context, nickname string) (model.User, error) {
 	var usr model.User
 	row := r.QueryRow(ctx, getUserQuery, nickname)
 	if err := row.Scan(&usr.Nickname, &usr.HashedPassword); err == pgx.ErrNoRows {

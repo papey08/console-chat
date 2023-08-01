@@ -8,6 +8,7 @@ services:
       - "8080:8080"
     depends_on:
       - user_repo
+      - user_repo_cache
 
   user_repo:
     restart: always
@@ -21,6 +22,12 @@ services:
       - ./migrations/:/docker-entrypoint-initdb.d/
     ports:
       - "5432:5432"
+
+  user_repo_cache:
+    restart: always
+    image: redis:7
+    ports:
+      - "6379:6379"
 
 volumes:
   db-data:
