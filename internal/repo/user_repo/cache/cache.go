@@ -1,4 +1,4 @@
-package userrepo
+package cache
 
 import (
 	"console-chat/internal/model"
@@ -33,17 +33,18 @@ func cachedUsrToUsr(u cachedUser) model.User {
 
 // cacheRepo is a temporary storage for new registered users to make their
 // signing in faster
-type cacheRepo struct {
+type CacheRepo struct {
 	redis.Client
 }
 
-func newCache(rc *redis.Client) cache {
+/*
+func New(rc *redis.Client) userrepo.Cache {
 	return &cacheRepo{
 		Client: *rc,
 	}
-}
+} */
 
-func (c *cacheRepo) SetUserByKey(ctx context.Context, key string, u model.User) (model.User, error) {
+func (c *CacheRepo) SetUserByKey(ctx context.Context, key string, u model.User) (model.User, error) {
 	cu := usrToCashedUsr(u)
 	data, _ := json.Marshal(cu)
 	if err := c.Set(ctx, u.Nickname, data, expiration).Err(); err != nil {
@@ -52,7 +53,7 @@ func (c *cacheRepo) SetUserByKey(ctx context.Context, key string, u model.User) 
 	return u, nil
 }
 
-func (c *cacheRepo) GetUserByKey(ctx context.Context, key string) (model.User, error) {
+func (c *CacheRepo) GetUserByKey(ctx context.Context, key string) (model.User, error) {
 	recievedData, err := c.Get(ctx, key).Result()
 	if err == redis.Nil {
 		return model.User{}, model.UserNotFound

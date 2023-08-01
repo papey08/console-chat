@@ -43,9 +43,6 @@ func main() {
 	if err := InitConfig(); err != nil {
 		log.Fatal("config init error:", err.Error())
 	}
-	host := viper.GetString("server.ginserver.host")
-	port := viper.GetInt("server.ginserver.port")
-	tokenKey := []byte(randomdata.Paragraph())
 
 	// configuring userRepo
 	userRepoURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
@@ -64,6 +61,7 @@ func main() {
 		}
 	}()
 
+	// configuring userRepo cache
 	redisHost := viper.GetString("userrepo.redis.host")
 	redisPort := viper.GetString("userrepo.redis.port")
 	redisPassword := viper.GetString("userrepo.redis.password")
@@ -79,6 +77,11 @@ func main() {
 			log.Fatal("can't close recis cache connection:", err.Error())
 		}
 	}()
+
+	// configuring the server
+	host := viper.GetString("server.ginserver.host")
+	port := viper.GetInt("server.ginserver.port")
+	tokenKey := []byte(randomdata.Paragraph())
 
 	ws := wsserver.New(tokenKey)
 	app := app.New(userrepo.New(userRepoConn, redisCache))
@@ -96,9 +99,10 @@ func main() {
 		}
 	}()
 
+	// waiting for Ctrl+C
 	<-osSignals
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // 30s timeout to finish all active connections
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {

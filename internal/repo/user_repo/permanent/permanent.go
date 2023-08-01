@@ -1,4 +1,4 @@
-package userrepo
+package permanent
 
 import (
 	"console-chat/internal/model"
@@ -25,17 +25,17 @@ const (
 const duplicateCode = "23505"
 
 // permanentRepo is a permanent storage of all users
-type permanentRepo struct {
+type PermanentRepo struct {
 	pgx.Conn
 }
 
-func newPermanent(conn *pgx.Conn) permanent {
+/* func newPermanent(conn *pgx.Conn) permanent {
 	return &permanentRepo{
 		Conn: *conn,
 	}
-}
+} */
 
-func (r *permanentRepo) InsertUser(ctx context.Context, u model.User) (model.User, error) {
+func (r *PermanentRepo) InsertUser(ctx context.Context, u model.User) (model.User, error) {
 	_, err := r.Exec(ctx, addUserQuery, u.Nickname, u.HashedPassword)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == duplicateCode {
@@ -49,7 +49,7 @@ func (r *permanentRepo) InsertUser(ctx context.Context, u model.User) (model.Use
 	return u, nil
 }
 
-func (r *permanentRepo) SelectUser(ctx context.Context, nickname string) (model.User, error) {
+func (r *PermanentRepo) SelectUser(ctx context.Context, nickname string) (model.User, error) {
 	var usr model.User
 	row := r.QueryRow(ctx, getUserQuery, nickname)
 	if err := row.Scan(&usr.Nickname, &usr.HashedPassword); err == pgx.ErrNoRows {

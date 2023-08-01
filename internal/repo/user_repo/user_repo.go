@@ -3,13 +3,15 @@ package userrepo
 import (
 	"console-chat/internal/app"
 	"console-chat/internal/model"
+	"console-chat/internal/repo/user_repo/cache"
+	"console-chat/internal/repo/user_repo/permanent"
 	"context"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/jackc/pgx/v5"
 )
 
-type permanent interface {
+type permanentRepo interface {
 	// InsertUser adds user to the permanent storage
 	InsertUser(ctx context.Context, u model.User) (model.User, error)
 
@@ -17,7 +19,7 @@ type permanent interface {
 	SelectUser(ctx context.Context, nickname string) (model.User, error)
 }
 
-type cache interface {
+type cacheRepo interface {
 	// SetUserByKey adds user to the temporary storage
 	SetUserByKey(ctx context.Context, key string, u model.User) (model.User, error)
 
@@ -26,14 +28,18 @@ type cache interface {
 }
 
 type Repo struct {
-	permanent
-	cache
+	permanentRepo
+	cacheRepo
 }
 
 func New(conn *pgx.Conn, rc *redis.Client) app.UserRepo {
 	return &Repo{
-		permanent: newPermanent(conn),
-		cache:     newCache(rc),
+		permanentRepo: &permanent.PermanentRepo{
+			Conn: *conn,
+		},
+		cacheRepo: &cache.CacheRepo{
+			Client: *rc,
+		},
 	}
 }
 
