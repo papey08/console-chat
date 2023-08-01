@@ -31,6 +31,8 @@ func cachedUsrToUsr(u cachedUser) model.User {
 	}
 }
 
+// cacheRepo is a temporary storage for new registered users to make their
+// signing in faster
 type cacheRepo struct {
 	redis.Client
 }

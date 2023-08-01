@@ -10,12 +10,18 @@ import (
 )
 
 type permanent interface {
+	// InsertUser adds user to the permanent storage
 	InsertUser(ctx context.Context, u model.User) (model.User, error)
+
+	// SelectUser gets user from the permanent storage
 	SelectUser(ctx context.Context, nickname string) (model.User, error)
 }
 
 type cache interface {
+	// SetUserByKey adds user to the temporary storage
 	SetUserByKey(ctx context.Context, key string, u model.User) (model.User, error)
+
+	// GetUserByKey gets user from the temporary storage
 	GetUserByKey(ctx context.Context, key string) (model.User, error)
 }
 

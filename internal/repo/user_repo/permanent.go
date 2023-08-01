@@ -24,6 +24,7 @@ const (
 // duplicateCode is a code of pgconn.PgError when primary key is duplicated
 const duplicateCode = "23505"
 
+// permanentRepo is a permanent storage of all users
 type permanentRepo struct {
 	pgx.Conn
 }
