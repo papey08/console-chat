@@ -10,7 +10,7 @@ import (
 )
 
 func NewHTTPServer(host string, port int, ws wsserver.WsServer, app app.App, tokenKey []byte) *http.Server {
-	gin.SetMode(gin.DebugMode)
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	api := router.Group("console-chat")
 	AppRouter(api, ws, app, tokenKey)

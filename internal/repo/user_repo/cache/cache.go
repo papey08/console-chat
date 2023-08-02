@@ -37,13 +37,6 @@ type CacheRepo struct {
 	redis.Client
 }
 
-/*
-func New(rc *redis.Client) userrepo.Cache {
-	return &cacheRepo{
-		Client: *rc,
-	}
-} */
-
 func (c *CacheRepo) SetUserByKey(ctx context.Context, key string, u model.User) (model.User, error) {
 	cu := usrToCashedUsr(u)
 	data, _ := json.Marshal(cu)

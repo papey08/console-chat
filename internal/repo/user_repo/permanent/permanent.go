@@ -29,12 +29,6 @@ type PermanentRepo struct {
 	pgx.Conn
 }
 
-/* func newPermanent(conn *pgx.Conn) permanent {
-	return &permanentRepo{
-		Conn: *conn,
-	}
-} */
-
 func (r *PermanentRepo) InsertUser(ctx context.Context, u model.User) (model.User, error) {
 	_, err := r.Exec(ctx, addUserQuery, u.Nickname, u.HashedPassword)
 	if err != nil {
